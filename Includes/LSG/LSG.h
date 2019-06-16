@@ -1,9 +1,9 @@
 #pragma once
 #include <iterator>
 
-namespace SeqIt
+namespace LSG
 {
-	template <class T = int, T CD = 1>
+	template <class T = int>
 	class Arithmetic
 	{
 	public:
@@ -11,9 +11,9 @@ namespace SeqIt
 		using value_type = T;
 		using difference_type = ptrdiff_t;
 		using reference = const T &;
-		using pointer = const T *;
+		using pointer = const T*;
 
-		constexpr Arithmetic(T Init = T{}) :Num{ std::move(Init) } {}
+		constexpr Arithmetic(T Init = T{}, T CD = 1) :Num{ std::move(Init) }, CD{ std::move(CD) } {}
 
 		[[nodiscard]] constexpr T operator*() const & { return Num; }
 		[[nodiscard]] constexpr T operator*() && { return std::move(Num); }
@@ -27,9 +27,10 @@ namespace SeqIt
 		[[nodiscard]] constexpr Arithmetic operator+(difference_type N) const { Arithmetic I = *this; return I += N; }
 		constexpr Arithmetic& operator-=(difference_type N) & { return *this += -N; }
 		[[nodiscard]] constexpr Arithmetic operator-(difference_type N) const { return *this + -N; }
-		[[nodiscard]] constexpr difference_type operator-(const Arithmetic& I) const { return (Num - I.Num) * CD; }
 		[[nodiscard]] constexpr T operator[](difference_type N) const { return *(*this + N); }
 
+		// WARNING: Using with having different common difference is undefined behavior.
+		[[nodiscard]] constexpr difference_type operator-(const Arithmetic& I) const { return (Num - I.Num) * CD; }
 		[[nodiscard]] constexpr bool operator==(const Arithmetic& R) const { return Num == R.Num; }
 		[[nodiscard]] constexpr bool operator!=(const Arithmetic& R) const { return !(*this == R); }
 		[[nodiscard]] constexpr bool operator<(const Arithmetic& R) const { return R - *this > 0; }
@@ -38,13 +39,33 @@ namespace SeqIt
 		[[nodiscard]] constexpr bool operator<=(const Arithmetic& R) const { return !(*this > R); }
 
 	private:
-		T Num;
+		T Num, CD;
 	};
 
-	template <class T, T CD>
-	[[nodiscard]] static constexpr Arithmetic<T, CD> operator+
-		(typename Arithmetic<T, CD>::difference_type N, const Arithmetic<T, CD>& I)
+	template <class T>
+	[[nodiscard]] static constexpr Arithmetic<T> operator+
+		(typename Arithmetic<T>::difference_type N, const Arithmetic<T>& I)
 	{
 		return I + N;
 	}
+
+	template <class T>
+	class Range
+	{
+	public:
+		// [0, Last)
+		constexpr Range(T Last) :Range{ T{}, std::move(Last), 1 } {}
+
+		// [First, Last)
+		// An integer N that satisfies { First + N*CD = Last } must exist.
+		// If not, the comparison of Arithmetic returned by begin and end is an undefined behavior.
+		constexpr Range(T First, T Last, T CD = 1)
+			: First{ std::move(First) }, Last{ std::move(Last) }, CD{ std::move(CD) } {}
+
+		[[nodiscard]] constexpr Arithmetic<T> begin() const { return { First, CD }; }
+		[[nodiscard]] constexpr Arithmetic<T> end() const { return { Last, CD }; }
+
+	private:
+		T First, Last, CD;
+	};
 }
