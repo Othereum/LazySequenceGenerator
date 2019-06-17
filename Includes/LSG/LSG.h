@@ -68,4 +68,10 @@ namespace LSG
 	private:
 		T First, Last, CD;
 	};
+
+	template <class T, class U>
+	Range(T, U)->Range<std::common_type_t<T, U>>;
+
+	template <class T, class U, class V>
+	Range(T, U, V)->Range<std::common_type_t<std::common_type_t<T, U>, V>>;
 }
